@@ -8,15 +8,7 @@ import FeedbackModal from '../components/dashboard/FeedbackModal';
 import LegalModal from '../components/dashboard/LegalModal';
 import LibraryModal from '../components/dashboard/LibraryModal';
 import { toast } from 'sonner';
-
-export interface Video {
-  id: number;
-  title: string;
-  date: string;
-  status: string;
-  thumbnail: string;
-  url: string;
-}
+import { Video } from '../types';
 
 const initialVideos: Video[] = [
   { id: 1, title: "A Jornada do Herói", date: "20/07/2025", status: "Concluído", thumbnail: "https://i.imgur.com/8zHmH3z.jpeg", url: "https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4" },

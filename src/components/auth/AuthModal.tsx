@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Mail, Lock, User as UserIcon, Loader2, Chrome } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { X, Mail, Lock, User as UserIcon, Loader2, Chrome, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
+  const { signIn, signUp } = useAuth();
   const [isLoginView, setIsLoginView] = useState(true);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -24,14 +25,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   useOnClickOutside(modalRef, onClose);
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/dashboard'
-      }
-    });
-    setLoading(false);
+    toast.info("A autenticação com Google está desativada no modo de simulação.");
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -39,9 +33,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
 
     if (isLoginView) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) toast.error(error.message);
-      else {
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error(error.message);
+      } else {
         toast.success('Login bem-sucedido!');
         onClose();
       }
@@ -51,17 +46,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         setLoading(false);
         return;
       }
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-      if (error) toast.error(error.message);
-      else toast.info('Verifique seu e-mail para confirmar o cadastro.');
+      const { error } = await signUp(fullName, email, password);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.info('Cadastro realizado! Por favor, faça o login.');
+        setIsLoginView(true); // Switch to login view after successful signup
+      }
     }
     setLoading(false);
   };
@@ -87,10 +78,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <X size={24} />
             </button>
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-center text-white mb-6">{isLoginView ? t('auth_login') : t('auth_signup')}</h2>
+              <h2 className="text-2xl font-bold text-center text-white mb-2">
+                {isLoginView ? t('auth_welcome_back') : t('auth_signup')}
+              </h2>
+              {isLoginView && (
+                <p className="text-center text-muted-foreground mb-6">{t('auth_login_to_continue')}</p>
+              )}
               
               <button onClick={handleGoogleLogin} disabled={loading} className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-lg transition-all duration-300 mb-4 disabled:opacity-50">
-                {loading ? <Loader2 className="animate-spin" /> : <Chrome size={20} />}
+                <Chrome size={20} />
                 {t('auth_google')}
               </button>
 
@@ -99,6 +95,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <span className="flex-shrink mx-4 text-gray-400 text-sm">OU</span>
                 <div className="flex-grow border-t border-gray-600"></div>
               </div>
+
+              {isLoginView && (
+                <div className="bg-blue-950/70 border border-blue-700/50 rounded-lg p-3 text-sm text-blue-200 flex items-start gap-3 mb-4">
+                  <Info size={18} className="flex-shrink-0 mt-0.5 text-blue-400" />
+                  <div>
+                    <h4 className="font-bold text-white">Modo de Demonstração</h4>
+                    <p className="mt-1">
+                      Use qualquer e-mail (ex: <code className="bg-background/50 px-1 py-0.5 rounded">admin@gern.com</code>) com a senha universal: <code className="bg-background/50 px-1 py-0.5 rounded">password123</code>.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleEmailAuth} className="space-y-4">
                 {!isLoginView && (
@@ -113,7 +121,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input type="password" placeholder={t('auth_password')} value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full bg-background border border-white/10 rounded-lg py-3 pl-10 pr-3 focus:ring-2 focus:ring-primary focus:outline-none transition-all" />
+                  <input type="password" placeholder={`${t('auth_password')}`} value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full bg-background border border-white/10 rounded-lg py-3 pl-10 pr-3 focus:ring-2 focus:ring-primary focus:outline-none transition-all" />
                 </div>
                 {!isLoginView && (
                   <div className="relative">
@@ -121,7 +129,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <input type="password" placeholder={t('auth_confirm_password')} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full bg-background border border-white/10 rounded-lg py-3 pl-10 pr-3 focus:ring-2 focus:ring-primary focus:outline-none transition-all" />
                   </div>
                 )}
-                <button type="submit" disabled={loading} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                
+                {isLoginView && (
+                  <div className="text-right -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => toast.info("Funcionalidade não implementada no modo de simulação.")}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {t('auth_forgot_password')}
+                    </button>
+                  </div>
+                )}
+
+                <button type="submit" disabled={loading} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed !mt-6">
                   {loading ? <Loader2 className="animate-spin mx-auto" /> : (isLoginView ? t('auth_login') : t('auth_signup'))}
                 </button>
               </form>

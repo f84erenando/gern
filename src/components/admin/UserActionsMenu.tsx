@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { MoreHorizontal, Shield, User, XCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AdminUser } from './UsersTable';
-import { supabase } from '../../lib/supabase';
+import { AdminUser } from '../../types';
 import { toast } from 'sonner';
+import { mockApi } from '../../lib/mockApi';
 
 interface UserActionsMenuProps {
   user: AdminUser;
@@ -20,34 +20,29 @@ const UserActionsMenu: React.FC<UserActionsMenuProps> = ({ user, onActionComplet
 
   const handleAction = async (action: 'promote' | 'demote' | 'block' | 'unblock') => {
     setLoadingAction(action);
-    let rpcName = '';
-    let params = {};
+    let promise;
     let successMessage = '';
 
     switch (action) {
       case 'promote':
-        rpcName = 'update_user_role';
-        params = { target_user_id: user.id, new_role: 'admin' };
+        promise = mockApi.updateUserRole(user.id, 'admin');
         successMessage = `${user.full_name || user.email} foi promovido a admin.`;
         break;
       case 'demote':
-        rpcName = 'update_user_role';
-        params = { target_user_id: user.id, new_role: 'user' };
+        promise = mockApi.updateUserRole(user.id, 'user');
         successMessage = `${user.full_name || user.email} agora é um usuário padrão.`;
         break;
       case 'block':
-        rpcName = 'update_user_status';
-        params = { target_user_id: user.id, new_status: 'Bloqueado' };
+        promise = mockApi.updateUserStatus(user.id, 'Bloqueado');
         successMessage = `${user.full_name || user.email} foi bloqueado.`;
         break;
       case 'unblock':
-        rpcName = 'update_user_status';
-        params = { target_user_id: user.id, new_status: 'active' };
+        promise = mockApi.updateUserStatus(user.id, 'active');
         successMessage = `${user.full_name || user.email} foi reativado.`;
         break;
     }
 
-    const { error } = await supabase.rpc(rpcName, params);
+    const { error } = await promise;
 
     if (error) {
       toast.error(`Falha: ${error.message}`);

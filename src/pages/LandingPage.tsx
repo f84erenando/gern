@@ -4,10 +4,17 @@ import { motion } from 'framer-motion';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import AuthModal from '../components/auth/AuthModal';
+import { useAuth } from '../contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
+  const { session } = useAuth();
+
+  if (session) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

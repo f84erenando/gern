@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal';
-import { Video } from '../../pages/DashboardPage';
+import { Video } from '../../types';
 import { Download, Trash2, Play, AlertTriangle } from 'lucide-react';
 import VideoPlayerModal from './VideoPlayerModal';
 import { toast } from 'sonner';

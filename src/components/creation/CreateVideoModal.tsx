@@ -5,6 +5,7 @@ import { PenSquare, Image, ArrowLeft } from 'lucide-react';
 import TextToVideoFlow from './TextToVideoFlow';
 import FramesToVideoFlow from './FramesToVideoFlow';
 import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '../../lib/utils';
 
 interface CreateVideoModalProps {
   isOpen: boolean;
@@ -39,7 +40,15 @@ const CreateVideoModal: React.FC<CreateVideoModalProps> = ({ isOpen, onClose, on
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={getTitle()} className="max-w-xl lg:max-w-3xl">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title={getTitle()} 
+      className={cn(
+        "max-w-xl lg:max-w-3xl",
+        step === 'frames_flow' && 'lg:max-w-6xl'
+      )}
+    >
       {step !== 'initial' && step !== 'options' && (
         <button onClick={() => setStep('options')} className="absolute top-5 left-5 text-muted-foreground hover:text-foreground z-10">
           <ArrowLeft size={20} />

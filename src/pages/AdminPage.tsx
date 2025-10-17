@@ -4,7 +4,7 @@ import StatCard from '../components/admin/StatCard';
 import UsersTable from '../components/admin/UsersTable';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { mockApi } from '../lib/mockApi';
 
 const AdminPage: React.FC = () => {
   const { user } = useAuth();
@@ -14,11 +14,13 @@ const AdminPage: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       setLoadingStats(true);
-      const { data, error } = await supabase.rpc('get_total_users_count');
+      const { count, error } = await mockApi.getTotalUsersCount();
+
       if (error) {
         console.error("Erro ao buscar contagem de usuários:", error);
+        setTotalUsers(null);
       } else {
-        setTotalUsers(data);
+        setTotalUsers(count);
       }
       setLoadingStats(false);
     };

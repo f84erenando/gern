@@ -1,21 +1,28 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User, AuthApiError } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { mockApi } from '../lib/mockApi';
+
+// Simulate a Supabase Session object structure
+interface MockSession {
+  user: User;
+  token: string;
+}
 
 interface AuthContextType {
-  session: Session | null;
+  session: MockSession | null;
   user: User | null;
-  loading: boolean;
   isAdmin: boolean;
+  loading: boolean;
   signOut: () => void;
+  signIn: (email: string, pass: string) => Promise<{error?: {message: string}}>;
+  signUp: (name: string, email: string, pass: string) => Promise<{error?: {message: string}}>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<MockSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -26,83 +33,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(false);
       return;
     }
-    try {
-      // Changed from .from('profiles').select() to an RPC call to avoid RLS recursion.
-      const { data, error } = await supabase.rpc('get_my_role');
-
-      if (error) {
-        console.error("Erro ao buscar role do usuário via RPC:", error);
-        setIsAdmin(false);
-        return;
-      }
-      
-      setIsAdmin(data === 'admin');
-
-    } catch (error) {
-      console.error("Erro inesperado ao verificar role de admin:", error);
-      setIsAdmin(false);
-    }
+    const { role } = await mockApi.getUserRole(currentUser.id);
+    setIsAdmin(role === 'admin');
   };
 
+  // This effect runs once on startup to check for an existing session
   useEffect(() => {
     const getSessionAndProfile = async () => {
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data } = await mockApi.getSession();
+        const currentSession = data.session as MockSession | null;
         setSession(currentSession);
         const currentUser = currentSession?.user ?? null;
         setUser(currentUser);
         await checkAdminRole(currentUser);
       } catch (error) {
-        if (error instanceof AuthApiError && error.message === 'Invalid Refresh Token: Refresh Token Not Found') {
-          // This is normal for a logged-out user, no need to log an error.
-        } else {
-          console.error("Falha inesperada ao inicializar a sessão de autenticação:", error);
-        }
+        console.error("Falha ao inicializar a sessão mock:", error);
       } finally {
         setLoading(false);
       }
     };
-
     getSessionAndProfile();
+  }, []);
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      await checkAdminRole(currentUser);
+  const updateAuthState = async (newSession: MockSession | null) => {
+    setSession(newSession);
+    const currentUser = newSession?.user ?? null;
+    setUser(currentUser);
+    await checkAdminRole(currentUser);
+  };
 
-      if (_event === 'SIGNED_IN') {
-        navigate('/dashboard');
-      }
-      if (_event === 'SIGNED_OUT') {
-        navigate('/');
-      }
-    });
+  const signIn = async (email: string, pass: string) => {
+    const { data, error } = await mockApi.signInWithPassword(email, pass);
+    if (error) return { error };
+    
+    const newSession = data.session as MockSession;
+    await updateAuthState(newSession);
+    navigate('/dashboard');
+    return {};
+  };
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
+  const signUp = async (name: string, email: string, pass: string) => {
+      const { error } = await mockApi.signUp(name, email, pass);
+      if (error) return { error };
+      return {};
+  };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await mockApi.signOut();
+    await updateAuthState(null);
+    navigate('/');
   };
 
   const value = {
     session,
     user,
-    loading,
     isAdmin,
+    loading,
     signOut,
+    signIn,
+    signUp
   };
-
-  if (loading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

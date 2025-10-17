@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { Video } from '../../pages/DashboardPage';
+import { Video } from '../../types';
 
 interface VideoPlayerModalProps {
   isOpen: boolean;

@@ -1,18 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 import UserActionsMenu from './UserActionsMenu';
 import { useAuth } from '../../contexts/AuthContext';
-
-export interface AdminUser {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-  role: string | null;
-  status: string | null;
-  created_at: string;
-}
+import { mockApi } from '../../lib/mockApi';
+import { AdminUser } from '../../types';
 
 const UsersTable: React.FC = () => {
   const { user: adminUser } = useAuth();
@@ -24,7 +16,9 @@ const UsersTable: React.FC = () => {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc('get_all_users');
+    
+    const { data, error } = await mockApi.getAllUsers();
+
     if (error) {
       toast.error("Falha ao carregar usuários: " + error.message);
       console.error(error);
